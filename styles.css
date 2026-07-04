@@ -232,3 +232,48 @@ tbody tr:hover { background: var(--surface-2); }
   .asset-form { grid-template-columns: 1fr; }
   .stat-value { font-size: 1.25rem; }
 }
+
+/* ---------- 확장 기능 스타일 ---------- */
+.head-btns { display: flex; gap: 0.5rem; align-items: center; flex-wrap: wrap; }
+
+/* 세그먼트 토글 */
+.seg { display: inline-flex; border: 1px solid var(--border); border-radius: 10px; overflow: hidden; background: var(--surface); }
+.seg-btn { font: inherit; border: none; background: transparent; color: var(--text-dim); padding: 0.45rem 0.8rem; cursor: pointer; white-space: nowrap; }
+.seg-btn.active { background: var(--primary); color: #fff; }
+
+/* 폼 확장 */
+.field-wide { grid-column: 1 / -1; }
+.mode-amount, .mode-qty {
+  grid-column: 1 / -1;
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+  gap: 0.75rem;
+  align-items: end;
+}
+.field.computed { color: var(--primary-dim); font-weight: 600; padding-top: 0.5rem; }
+
+/* 검색/정렬 */
+.asset-toolbar { display: flex; gap: 0.5rem; margin: 0 0 1rem; }
+.search-input { flex: 1; min-width: 0; }
+.search-input, .sort-select {
+  padding: 0.5rem 0.7rem; border: 1px solid var(--border); border-radius: 10px;
+  background: var(--surface); color: var(--text); font: inherit;
+}
+
+/* 자산군 소계 / 보조 텍스트 */
+tr.subtotal td { background: var(--surface-2); font-weight: 600; font-size: 0.85rem; }
+.cell-sub.dim { color: var(--text-dim); font-weight: 400; }
+span.note, .rebalance-summary .note { color: var(--text-dim); font-size: 0.82rem; }
+
+/* 스크린샷 OCR */
+.scan-panel { border: 1px solid var(--border); border-radius: var(--radius); padding: 1rem; margin-bottom: 1rem; background: var(--surface-2); }
+.scan-head { display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.5rem; }
+.beta { font-size: 0.66rem; background: var(--primary); color: #fff; padding: 0.05rem 0.4rem; border-radius: 999px; }
+.scan-actions { display: flex; gap: 0.75rem; align-items: center; margin: 0.5rem 0; flex-wrap: wrap; }
+.scan-status { font-size: 0.82rem; color: var(--text-dim); }
+.scan-result { margin-top: 0.75rem; overflow-x: auto; }
+.scan-table { width: 100%; border-collapse: collapse; font-size: 0.85rem; }
+.scan-table th, .scan-table td { padding: 0.35rem 0.3rem; border-bottom: 1px solid var(--border); text-align: left; }
+.scan-in { width: 100%; padding: 0.4rem 0.5rem; border: 1px solid var(--border); border-radius: 8px; background: var(--surface); color: var(--text); font: inherit; }
+.scan-in.num { text-align: right; }
+.scan-commit { display: flex; gap: 0.5rem; justify-content: flex-end; margin-top: 0.6rem; }

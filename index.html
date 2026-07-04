@@ -53,7 +53,34 @@
       <section class="panel">
         <div class="panel-head">
           <h2>보유 자산</h2>
-          <button id="addAssetBtn" class="btn btn-primary">+ 자산 추가</button>
+          <div class="head-btns">
+            <button id="scanBtn" class="btn btn-ghost" title="스크린샷에서 자동 인식">📸 스크린샷</button>
+            <button id="addAssetBtn" class="btn btn-primary">+ 자산 추가</button>
+          </div>
+        </div>
+
+        <!-- 스크린샷 인식 (베타) -->
+        <input type="file" id="scanFile" accept="image/*" hidden />
+        <div id="scanPanel" class="scan-panel" hidden>
+          <div class="scan-head">
+            <strong>📸 스크린샷 인식 <span class="beta">베타</span></strong>
+            <button id="scanCloseBtn" class="btn-mini">닫기</button>
+          </div>
+          <p class="hint" id="scanHint">잔고 화면 캡처를 올리면 종목명과 금액을 자동으로 읽어옵니다. 읽은 결과는 저장 전에 확인·수정할 수 있어요. (인식이 완벽하진 않으니 숫자를 꼭 확인하세요.)</p>
+          <div class="scan-actions">
+            <button id="scanPickBtn" class="btn btn-primary">이미지 선택</button>
+            <button id="scanAddRowBtn" class="btn btn-ghost">+ 직접 행 추가</button>
+            <span id="scanStatus" class="scan-status"></span>
+          </div>
+          <div id="scanResult" class="scan-result" hidden>
+            <table class="scan-table">
+              <thead><tr><th></th><th>종목명</th><th>자산군</th><th class="num">평가금액</th><th></th></tr></thead>
+              <tbody id="scanBody"></tbody>
+            </table>
+            <div class="scan-commit">
+              <button id="scanSaveBtn" class="btn btn-primary">선택 항목 등록</button>
+            </div>
+          </div>
         </div>
 
         <form id="assetForm" class="asset-form" autocomplete="off">
@@ -67,21 +94,66 @@
             <input list="classList" id="assetClass" placeholder="예: 국내주식" required />
             <datalist id="classList"></datalist>
           </div>
-          <div class="field">
-            <label for="assetValue">평가금액 (원)</label>
-            <input type="number" id="assetValue" min="0" step="any" inputmode="numeric"
-                   placeholder="예: 5000000" required />
+
+          <div class="field field-wide">
+            <label>입력방식</label>
+            <div class="seg" id="inputModeSeg">
+              <button type="button" class="seg-btn active" data-mode="amount">금액 직접</button>
+              <button type="button" class="seg-btn" data-mode="qty">수량 × 단가</button>
+            </div>
           </div>
-          <div class="field">
-            <label for="assetCost">매입금액 (선택)</label>
-            <input type="number" id="assetCost" min="0" step="any" inputmode="numeric"
-                   placeholder="손익 계산용" />
+
+          <!-- 금액 직접 -->
+          <div class="mode-amount">
+            <div class="field">
+              <label for="assetValue">평가금액 (원)</label>
+              <input type="number" id="assetValue" min="0" step="any" inputmode="numeric" placeholder="예: 5000000" />
+            </div>
+            <div class="field">
+              <label for="assetCost">매입금액 (선택)</label>
+              <input type="number" id="assetCost" min="0" step="any" inputmode="numeric" placeholder="손익 계산용" />
+            </div>
           </div>
+
+          <!-- 수량 × 단가 -->
+          <div class="mode-qty" hidden>
+            <div class="field">
+              <label for="assetQty">수량 (주)</label>
+              <input type="number" id="assetQty" min="0" step="any" inputmode="decimal" placeholder="예: 10" />
+            </div>
+            <div class="field">
+              <label for="assetPrice">현재가 (원)</label>
+              <input type="number" id="assetPrice" min="0" step="any" inputmode="numeric" placeholder="예: 70000" />
+            </div>
+            <div class="field">
+              <label for="assetAvg">매입단가 (선택)</label>
+              <input type="number" id="assetAvg" min="0" step="any" inputmode="numeric" placeholder="평단가" />
+            </div>
+            <div class="field field-wide computed" id="qtyComputed">평가금액 —</div>
+          </div>
+
+          <div class="field field-wide">
+            <label for="assetMemo">메모 (선택)</label>
+            <input type="text" id="assetMemo" placeholder="예: 배당주, 장기보유" />
+          </div>
+
           <div class="form-actions">
             <button type="submit" class="btn btn-primary" id="saveAssetBtn">저장</button>
             <button type="button" class="btn btn-ghost" id="cancelAssetBtn">취소</button>
           </div>
         </form>
+
+        <!-- 검색 / 정렬 -->
+        <div class="asset-toolbar" id="assetToolbar" hidden>
+          <input type="search" id="searchInput" class="search-input" placeholder="🔍 종목·자산군·메모 검색" />
+          <select id="sortSelect" class="sort-select" title="정렬">
+            <option value="value-desc">금액 많은순</option>
+            <option value="value-asc">금액 적은순</option>
+            <option value="name-asc">이름순</option>
+            <option value="class-asc">자산군별</option>
+            <option value="pl-desc">손익 높은순</option>
+          </select>
+        </div>
 
         <div class="table-wrap">
           <table id="assetTable">
@@ -116,15 +188,21 @@
     <section class="panel">
       <div class="panel-head">
         <h2>목표 배분 &amp; 자동 리밸런싱</h2>
-        <span id="targetSum" class="pill">합계 0%</span>
+        <div class="head-btns">
+          <div class="seg" id="rebalanceModeSeg">
+            <button type="button" class="seg-btn active" data-rmode="class">자산군 기준</button>
+            <button type="button" class="seg-btn" data-rmode="item">종목 기준</button>
+          </div>
+          <span id="targetSum" class="pill">합계 0%</span>
+        </div>
       </div>
-      <p class="hint">각 자산군의 목표 비중(%)을 입력하면, 목표에 맞추기 위해 무엇을 얼마나 사고 팔아야 하는지 자동으로 계산합니다.</p>
+      <p class="hint" id="rebalanceHint">각 항목의 목표 비중(%)을 입력하면, 목표에 맞추기 위해 무엇을 얼마나 사고 팔아야 하는지 자동으로 계산합니다.</p>
 
       <div class="table-wrap">
         <table id="rebalanceTable">
           <thead>
             <tr>
-              <th>자산군</th>
+              <th id="rbColName">자산군</th>
               <th class="num">현재 비중</th>
               <th class="num">목표 비중</th>
               <th class="num">현재 금액</th>
@@ -138,7 +216,7 @@
       </div>
       <p id="rebalanceSummary" class="rebalance-summary"></p>
       <div class="rebalance-actions">
-        <button id="autoTargetBtn" class="btn btn-ghost" title="현재 자산군을 균등 비중으로 채움">균등 배분 자동설정</button>
+        <button id="autoTargetBtn" class="btn btn-ghost" title="현재 항목을 균등 비중으로 채움">균등 배분 자동설정</button>
         <button id="resetTargetBtn" class="btn btn-ghost">목표 초기화</button>
       </div>
     </section>
