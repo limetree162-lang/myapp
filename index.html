@@ -29,18 +29,22 @@
       <div class="stat-card">
         <span class="stat-label">총 자산</span>
         <span class="stat-value" id="totalValue">₩0</span>
+        <span class="stat-sub" id="assetCountSub">종목 0개</span>
       </div>
       <div class="stat-card">
-        <span class="stat-label">보유 종목 수</span>
-        <span class="stat-value" id="assetCount">0</span>
+        <span class="stat-label">평가손익</span>
+        <span class="stat-value" id="plValue">—</span>
+        <span class="stat-sub" id="plSub">매입금액 입력 시 표시</span>
       </div>
       <div class="stat-card">
-        <span class="stat-label">자산군 수</span>
-        <span class="stat-value" id="classCount">0</span>
+        <span class="stat-label">수익률</span>
+        <span class="stat-value" id="returnValue">—</span>
+        <span class="stat-sub">매입금액 대비</span>
       </div>
       <div class="stat-card">
         <span class="stat-label">목표 이탈도</span>
         <span class="stat-value" id="driftValue">0%</span>
+        <span class="stat-sub">목표 배분과의 차이</span>
       </div>
     </section>
 
@@ -65,7 +69,13 @@
           </div>
           <div class="field">
             <label for="assetValue">평가금액 (원)</label>
-            <input type="number" id="assetValue" min="0" step="1000" placeholder="예: 5000000" required />
+            <input type="number" id="assetValue" min="0" step="any" inputmode="numeric"
+                   placeholder="예: 5000000" required />
+          </div>
+          <div class="field">
+            <label for="assetCost">매입금액 (선택)</label>
+            <input type="number" id="assetCost" min="0" step="any" inputmode="numeric"
+                   placeholder="손익 계산용" />
           </div>
           <div class="form-actions">
             <button type="submit" class="btn btn-primary" id="saveAssetBtn">저장</button>
@@ -126,6 +136,7 @@
         </table>
         <p id="emptyRebalance" class="empty">자산을 등록하면 리밸런싱 제안이 표시됩니다.</p>
       </div>
+      <p id="rebalanceSummary" class="rebalance-summary"></p>
       <div class="rebalance-actions">
         <button id="autoTargetBtn" class="btn btn-ghost" title="현재 자산군을 균등 비중으로 채움">균등 배분 자동설정</button>
         <button id="resetTargetBtn" class="btn btn-ghost">목표 초기화</button>

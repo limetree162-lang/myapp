@@ -45,7 +45,10 @@
   const $ = (id) => document.getElementById(id);
   const won = (n) =>
     "₩" + Math.round(n).toLocaleString("ko-KR");
+  const wonSigned = (n) =>
+    (n >= 0 ? "+" : "-") + "₩" + Math.round(Math.abs(n)).toLocaleString("ko-KR");
   const pct = (n) => (Math.round(n * 10) / 10).toFixed(1) + "%";
+  const pctSigned = (n) => (n >= 0 ? "+" : "-") + Math.abs(Math.round(n * 10) / 10).toFixed(1) + "%";
   const uid = () =>
     "a" + Date.now().toString(36) + Math.floor(Math.random() * 1e6).toString(36);
 
@@ -86,10 +89,37 @@
   function renderSummary() {
     const total = grandTotal();
     $("totalValue").textContent = won(total);
-    $("assetCount").textContent = String(state.assets.length);
-    const totals = classTotals();
-    $("classCount").textContent = String(Object.keys(totals).length);
+    $("assetCountSub").textContent =
+      `종목 ${state.assets.length}개 · 자산군 ${Object.keys(classTotals()).length}개`;
     $("driftValue").textContent = pct(computeDrift());
+
+    // 손익/수익률: 매입금액(cost)이 입력된 종목만 대상
+    const withCost = state.assets.filter((a) => Number(a.cost) > 0);
+    const invested = withCost.reduce((s, a) => s + Number(a.cost), 0);
+    const curValue = withCost.reduce((s, a) => s + Number(a.value || 0), 0);
+    const plEl = $("plValue");
+    const retEl = $("returnValue");
+    const plSub = $("plSub");
+
+    if (invested > 0) {
+      const pl = curValue - invested;
+      const ret = (pl / invested) * 100;
+      const cls = pl >= 0 ? "pos" : "neg";
+      plEl.textContent = wonSigned(pl);
+      plEl.className = "stat-value " + cls;
+      retEl.textContent = pctSigned(ret);
+      retEl.className = "stat-value " + cls;
+      plSub.textContent =
+        withCost.length === state.assets.length
+          ? `매입 ${won(invested)} 기준`
+          : `${withCost.length}/${state.assets.length}종목 기준`;
+    } else {
+      plEl.textContent = "—";
+      plEl.className = "stat-value";
+      retEl.textContent = "—";
+      retEl.className = "stat-value";
+      plSub.textContent = "매입금액 입력 시 표시";
+    }
   }
 
   // 목표 이탈도 = 각 자산군 (현재비중-목표비중) 절대값 합 / 2
@@ -120,10 +150,16 @@
         const tr = document.createElement("tr");
         const share = total ? (a.value / total) * 100 : 0;
         const color = colorForIndex(classIndex[a.class] ?? 0);
+        let plSub = "";
+        if (Number(a.cost) > 0) {
+          const pl = a.value - Number(a.cost);
+          const ret = (pl / Number(a.cost)) * 100;
+          plSub = `<div class="cell-sub ${pl >= 0 ? "pos" : "neg"}">${wonSigned(pl)} (${pctSigned(ret)})</div>`;
+        }
         tr.innerHTML = `
           <td>${escapeHtml(a.name)}</td>
           <td><span class="tag"><span class="dot" style="background:${color}"></span>${escapeHtml(a.class)}</span></td>
-          <td class="num">${won(a.value)}</td>
+          <td class="num">${won(a.value)}${plSub}</td>
           <td class="num">${pct(share)}</td>
           <td class="num">
             <button class="btn-mini" data-edit="${a.id}">수정</button>
@@ -266,6 +302,44 @@
     });
 
     updateTargetSum();
+    buildRebalanceSummary();
+  }
+
+  // 리밸런싱 실행 요약 (사람이 읽는 한 줄 안내)
+  function buildRebalanceSummary() {
+    const el = $("rebalanceSummary");
+    const total = grandTotal();
+    const totals = classTotals();
+    const classes = allClasses();
+    const targetSum = classes.reduce((s, c) => s + Number(state.targets[c] || 0), 0);
+
+    if (!total || targetSum === 0) {
+      el.innerHTML = "";
+      return;
+    }
+
+    const sells = [];
+    const buys = [];
+    classes.forEach((cls) => {
+      const cur = totals[cls] || 0;
+      const diff = (total * Number(state.targets[cls] || 0)) / 100 - cur;
+      if (diff > 1) buys.push(`${escapeHtml(cls)} ${won(diff)}`);
+      else if (diff < -1) sells.push(`${escapeHtml(cls)} ${won(-diff)}`);
+    });
+
+    if (!sells.length && !buys.length) {
+      el.innerHTML = "✅ 이미 목표 배분에 맞게 정리되어 있습니다.";
+      return;
+    }
+
+    const parts = [];
+    if (sells.length) parts.push(`<span class="s-sell">▼ 매도</span> ${sells.join(", ")}`);
+    if (buys.length) parts.push(`<span class="s-buy">▲ 매수</span> ${buys.join(", ")}`);
+    let note = "";
+    if (Math.round(targetSum) !== 100) {
+      note = `<br><span style="color:var(--text-dim);font-size:0.82rem;">※ 목표 비중 합계가 ${Math.round(targetSum)}%입니다. 100%로 맞추면 더 정확해요.</span>`;
+    }
+    el.innerHTML = `<strong>리밸런싱 요약</strong><br>${parts.join("<br>")}${note}`;
   }
 
   function updateTargetSum() {
@@ -304,6 +378,7 @@
       }
     });
     updateTargetSum();
+    buildRebalanceSummary();
   }
 
   // ---------- 이벤트 ----------
@@ -315,6 +390,7 @@
       $("assetName").value = asset ? asset.name : "";
       $("assetClass").value = asset ? asset.class : "";
       $("assetValue").value = asset ? asset.value : "";
+      $("assetCost").value = asset && asset.cost ? asset.cost : "";
       $("assetName").focus();
       $("saveAssetBtn").textContent = asset ? "수정 저장" : "저장";
     } else {
@@ -329,14 +405,21 @@
     const name = $("assetName").value.trim();
     const cls = $("assetClass").value.trim();
     const value = Number($("assetValue").value);
+    const cost = Number($("assetCost").value);
     if (!name || !cls || !(value >= 0)) return;
 
     if (id) {
       const a = state.assets.find((x) => x.id === id);
-      if (a) Object.assign(a, { name, class: cls, value });
+      if (a) {
+        Object.assign(a, { name, class: cls, value });
+        if (cost > 0) a.cost = cost;
+        else delete a.cost;
+      }
       toast("자산을 수정했습니다.");
     } else {
-      state.assets.push({ id: uid(), name, class: cls, value });
+      const asset = { id: uid(), name, class: cls, value };
+      if (cost > 0) asset.cost = cost;
+      state.assets.push(asset);
       toast("자산을 추가했습니다.");
     }
     save();
