@@ -1,0 +1,144 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>포트폴리오 정리 · 자산 자동 리밸런싱</title>
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+  <header class="app-header">
+    <div class="brand">
+      <span class="logo">📊</span>
+      <div>
+        <h1>포트폴리오 정리</h1>
+        <p class="tagline">내 자산을 자동으로 정리하고 리밸런싱하세요</p>
+      </div>
+    </div>
+    <div class="header-actions">
+      <button id="exportBtn" class="btn btn-ghost" title="JSON으로 내보내기">내보내기</button>
+      <button id="importBtn" class="btn btn-ghost" title="JSON 불러오기">불러오기</button>
+      <input type="file" id="importFile" accept="application/json" hidden />
+      <button id="themeBtn" class="btn btn-icon" title="다크/라이트 전환">🌓</button>
+    </div>
+  </header>
+
+  <main class="layout">
+    <!-- 요약 카드 -->
+    <section class="summary" aria-label="자산 요약">
+      <div class="stat-card">
+        <span class="stat-label">총 자산</span>
+        <span class="stat-value" id="totalValue">₩0</span>
+      </div>
+      <div class="stat-card">
+        <span class="stat-label">보유 종목 수</span>
+        <span class="stat-value" id="assetCount">0</span>
+      </div>
+      <div class="stat-card">
+        <span class="stat-label">자산군 수</span>
+        <span class="stat-value" id="classCount">0</span>
+      </div>
+      <div class="stat-card">
+        <span class="stat-label">목표 이탈도</span>
+        <span class="stat-value" id="driftValue">0%</span>
+      </div>
+    </section>
+
+    <div class="grid">
+      <!-- 왼쪽: 자산 입력 -->
+      <section class="panel">
+        <div class="panel-head">
+          <h2>보유 자산</h2>
+          <button id="addAssetBtn" class="btn btn-primary">+ 자산 추가</button>
+        </div>
+
+        <form id="assetForm" class="asset-form" autocomplete="off">
+          <input type="hidden" id="assetId" />
+          <div class="field">
+            <label for="assetName">종목명</label>
+            <input type="text" id="assetName" placeholder="예: 삼성전자, S&P500 ETF" required />
+          </div>
+          <div class="field">
+            <label for="assetClass">자산군</label>
+            <input list="classList" id="assetClass" placeholder="예: 국내주식" required />
+            <datalist id="classList"></datalist>
+          </div>
+          <div class="field">
+            <label for="assetValue">평가금액 (원)</label>
+            <input type="number" id="assetValue" min="0" step="1000" placeholder="예: 5000000" required />
+          </div>
+          <div class="form-actions">
+            <button type="submit" class="btn btn-primary" id="saveAssetBtn">저장</button>
+            <button type="button" class="btn btn-ghost" id="cancelAssetBtn">취소</button>
+          </div>
+        </form>
+
+        <div class="table-wrap">
+          <table id="assetTable">
+            <thead>
+              <tr>
+                <th>종목</th>
+                <th>자산군</th>
+                <th class="num">평가금액</th>
+                <th class="num">비중</th>
+                <th></th>
+              </tr>
+            </thead>
+            <tbody id="assetBody"></tbody>
+          </table>
+          <p id="emptyAssets" class="empty">아직 등록된 자산이 없습니다. "자산 추가"로 시작하세요.</p>
+        </div>
+      </section>
+
+      <!-- 오른쪽: 현재 배분 -->
+      <section class="panel">
+        <div class="panel-head">
+          <h2>현재 자산 배분</h2>
+        </div>
+        <div class="chart-area">
+          <canvas id="donut" width="240" height="240" aria-label="자산 배분 도넛 차트"></canvas>
+          <ul id="legend" class="legend"></ul>
+        </div>
+      </section>
+    </div>
+
+    <!-- 목표 배분 & 리밸런싱 -->
+    <section class="panel">
+      <div class="panel-head">
+        <h2>목표 배분 &amp; 자동 리밸런싱</h2>
+        <span id="targetSum" class="pill">합계 0%</span>
+      </div>
+      <p class="hint">각 자산군의 목표 비중(%)을 입력하면, 목표에 맞추기 위해 무엇을 얼마나 사고 팔아야 하는지 자동으로 계산합니다.</p>
+
+      <div class="table-wrap">
+        <table id="rebalanceTable">
+          <thead>
+            <tr>
+              <th>자산군</th>
+              <th class="num">현재 비중</th>
+              <th class="num">목표 비중</th>
+              <th class="num">현재 금액</th>
+              <th class="num">목표 금액</th>
+              <th class="num">조정</th>
+            </tr>
+          </thead>
+          <tbody id="rebalanceBody"></tbody>
+        </table>
+        <p id="emptyRebalance" class="empty">자산을 등록하면 리밸런싱 제안이 표시됩니다.</p>
+      </div>
+      <div class="rebalance-actions">
+        <button id="autoTargetBtn" class="btn btn-ghost" title="현재 자산군을 균등 비중으로 채움">균등 배분 자동설정</button>
+        <button id="resetTargetBtn" class="btn btn-ghost">목표 초기화</button>
+      </div>
+    </section>
+  </main>
+
+  <footer class="app-footer">
+    <span>데이터는 이 브라우저에만 저장됩니다 (localStorage). 서버로 전송되지 않습니다.</span>
+  </footer>
+
+  <div id="toast" class="toast" role="status" aria-live="polite"></div>
+
+  <script src="app.js"></script>
+</body>
+</html>
